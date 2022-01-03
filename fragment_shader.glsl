@@ -19,6 +19,8 @@ struct Sphere {
 // 盒子本身
 Cube room = Cube(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
 
+Cube c1 = Cube(vec3(0.3, -0.15, -0.15), vec3(0.6, 0.15, 0.15));
+
 Sphere s1 = Sphere(vec3(0.0), 0.25);
 
 float intersectSphere(vec3 origin, vec3 direction, Sphere sphere) {
@@ -30,7 +32,8 @@ float intersectSphere(vec3 origin, vec3 direction, Sphere sphere) {
     float discriminant = b * b - 4.0 * a * c;
     if (discriminant > 0.0) {
         float t = (-b - sqrt(discriminant)) / (2.0 * a);
-        if (t > 0.0) t;
+        if (t > 0.0)
+            return t;
     }
     return infinity + 1.0;
 }
@@ -63,17 +66,23 @@ vec3 calculateColor(vec3 initialRay) {
     vec3 accumulatedColor = vec3(0.0);
 
     float t = infinity + 1.0;
-    //float tCube = intersectCube(eye, initialRay, room);
-    float tSphere = intersectSphere(eye, initialRay, s1);
-    //if (t > tCube) t = tCube;
-    if (t > tSphere) t = tSphere;
+    float tRoom = intersectCube(eye, initialRay, room);
+    float tSphere1 = intersectSphere(eye, initialRay, s1);
+    float tCube1 = intersectCube(eye, initialRay, c1);
+
+
+    if (t > tRoom) t = tRoom;
+    if (t > tSphere1) t = tSphere1;
+    if (t > tCube1) t = tCube1;
 
     if (t > infinity)
         accumulatedColor = vec3(0.0);
-    else if (t == tCube)
+    else if (t == tRoom)
         accumulatedColor = colorOnRoom(eye + t * initialRay);
-    else if (t == tSphere)
+    else if (t == tSphere1)
         accumulatedColor = vec3(0.4, 0.8, 0.2);
+    else if (t == tCube1)
+        accumulatedColor = vec3(0.4, 0.2, 0.8);
     return accumulatedColor;
 }
 void main() {
