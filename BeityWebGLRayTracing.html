@@ -40,7 +40,7 @@ void main() {
 }
     </script>
     <script id="f" type="notjs">
-        precision mediump float;
+precision mediump float;
 
 float infinity = 1000000.0;
 
@@ -58,10 +58,20 @@ struct Sphere {
     vec3 center;
     float radius;
 };
+struct Ray {
+    vec3 origin;
+    vec3 direction;
+    int bounceNum;
+};
+struct Light {
+    vec3 position;
+    float intensity;
+};
 // 盒子本身
 Cube room = Cube(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
+Light light = Light(vec3(0.9, 0.9, 0.9), 0.5);
 
-Cube c1 = Cube(vec3(0.3, -0.45, -0.15), vec3(0.6, -0.25, 0.15));
+Cube c1 = Cube(vec3(0.3, -0.8, -0.15), vec3(0.6, -0.5, 0.15));
 
 Sphere s1 = Sphere(vec3(0.0), 0.25);
 
@@ -92,6 +102,8 @@ float intersectCube(vec3 origin, vec3 direction, Cube cube) {
     else
         return infinity + 1.0;
 }
+
+
 vec3 colorOnRoom(vec3 position) {
     if (position.x < -0.9999) {
         return vec3(0.1, 0.5, 1.0);
@@ -104,32 +116,84 @@ vec3 colorOnRoom(vec3 position) {
     }
     return vec3(0.75);
 }
-vec3 calculateColor(vec3 initialRay) {
-    vec3 accumulatedColor = vec3(0.0);
-
+vec3 lightColor(vec3 point) {
+    vec3 toLight = light.position - point;
     float t = infinity + 1.0;
-    float tRoom = intersectCube(eye, initialRay, room);
-    float tSphere1 = intersectSphere(eye, initialRay, s1);
-    float tCube1 = intersectCube(eye, initialRay, c1);
-
-
+    float tRoom = intersectCube(point, toLight, room);
+    float tSphere1 = intersectSphere(point, toLight, s1);
+    float tCube1 = intersectCube(point, toLight, c1);
     if (t > tRoom) t = tRoom;
     if (t > tSphere1) t = tSphere1;
     if (t > tCube1) t = tCube1;
+    if (t < 1.0) {
+        // 说明从point到light.positon的路径上有阻挡
+        return vec3(0.0);
+    } else {
+        return vec3(light.intensity);
+    }
+}
+vec3 normalOfCube(vec3 point, Cube cube) {
+    if (point.x < cube.minCorner.x + 0.0001) {
+        return vec3(-1.0, 0.0, 0.0);
+    } else if (point.x > cube.maxCorner.x - 0.0001) {
+        return vec3(1.0, 0.0, 0.0);
+    } else if (point.y < cube.minCorner.y + 0.0001) {
+        return vec3(0.0, -1.0, 0.0);
+    } else if (point.y > cube.maxCorner.y - 0.0001) {
+        return vec3(0.0, 1.0, 0.0);
+    } else if (point.z < cube.minCorner.z + 0.0001) {
+        return vec3(0.0, 0.0, -1.0);
+    } else {
+        return vec3(0.0, 0.0, 1.0);
+    }
+}
+vec3 normalOfSphere(vec3 point, Sphere sphere) {
+    return normalize(point - sphere.center);
+}
 
-    if (t > infinity)
-        accumulatedColor = vec3(0.0);
-    else if (t == tRoom)
-        accumulatedColor = colorOnRoom(eye + t * initialRay);
-    else if (t == tSphere1)
-        accumulatedColor = vec3(0.4, 0.8, 0.2);
-    else if (t == tCube1)
-        accumulatedColor = vec3(0.4, 0.2, 0.8);
+vec3 calculateColor(vec3 origin, vec3 direction) {
+    vec3 accumulatedColor = vec3(0.0);
+
+    // colorMask随着bounce增加不断变小。表示当前bounce对color的贡献百分比
+    float colorMask = 0.5;
+    float changeColorMask = 0.2;
+    for (int bounce = 0; bounce < 5; bounce++) {
+        float t = infinity + 1.0;
+        float tRoom = intersectCube(origin, direction, room);
+        float tSphere1 = intersectSphere(origin, direction, s1);
+        float tCube1 = intersectCube(origin, direction, c1);
+
+
+        if (t > tRoom) t = tRoom;
+        if (t > tSphere1) t = tSphere1;
+        if (t > tCube1) t = tCube1;
+
+        if (t > infinity){
+            break;
+        } else{
+            vec3 hitPoint = origin + t * direction;
+            vec3 normal;
+            if (t == tRoom) {
+                normal = -normalOfCube(hitPoint, room); // 这里一定是从内向外碰到了room，因此法线反向
+                accumulatedColor += colorMask * colorOnRoom(hitPoint) + colorMask * lightColor(hitPoint);
+            }
+            else if (t == tSphere1) {
+                normal = normalOfSphere(hitPoint, s1);
+                accumulatedColor += colorMask * vec3(0.4, 0.8, 0.2)  + colorMask * lightColor(hitPoint);
+            } else if (t == tCube1) {
+                normal = normalOfCube(hitPoint, c1);
+                accumulatedColor += colorMask * vec3(0.4, 0.8, 0.2) + colorMask * lightColor(hitPoint);
+            }
+            colorMask = colorMask * changeColorMask;
+            origin = hitPoint;
+            direction = reflect(direction, normal);
+        }
+    }
     return accumulatedColor;
 }
 void main() {
 
-        gl_FragColor = vec4(calculateColor(initialRay), 1.0);
+        gl_FragColor = vec4(calculateColor(eye, initialRay), 1.0);
 }
                 </script>
                 <script type="text/javascript" src="beity_webgl_ray_tracing.js"></script>
