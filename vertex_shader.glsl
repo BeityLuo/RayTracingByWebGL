@@ -11,17 +11,16 @@ uniform vec3 ray10;
 varying vec3 initialRay;
 void main() {
     vec2 percent = vertex.xy * 0.5 + 0.5;
-    initialRay = mix(mix(ray00, ray01, percent.y), mix(ray10, ray11, percent.y), percent.x);
-//    vec3 currentRay;
-//    if (vertex.x < 0.0 && vertex.y < 0.0)
-//        currentRay = ray00;
-//    else if (vertex.x < 0.0 && vertex.y > 0.0)
-//        currentRay = ray01;
-//    else if (vertex.x > 0.0 && vertex.y > 0.0)
-//        currentRay = ray11;
-//    else if (vertex.x > 0.0 && vertex.y < 0.0)
-//        currentRay = ray10;
-//    initialRay = vec4(currentRay, 1.0);
+    // 根据输入顶点的不同，决定不同的初始光线
+    // 比如输入(1, 1)时，就用视点看向盒子右上前角的光线
+    if (vertex.x < 0.0 && vertex.y < 0.0)
+        initialRay = ray00;
+    else if (vertex.x < 0.0 && vertex.y > 0.0)
+        initialRay = ray01;
+    else if (vertex.x > 0.0 && vertex.y > 0.0)
+        initialRay = ray11;
+    else if (vertex.x > 0.0 && vertex.y < 0.0)
+        initialRay = ray10;
 
     gl_Position = vec4(vertex, 1.0);
 }

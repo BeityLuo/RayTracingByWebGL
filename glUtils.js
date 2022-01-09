@@ -1,9 +1,6 @@
 // augment Sylvester some
 // by https://madebyevan.com/webgl-path-tracing/
 
-
-
-
 // 在sylvester提供的Matrix上增加功能
 
 // 平移变换，v是一个Vector
